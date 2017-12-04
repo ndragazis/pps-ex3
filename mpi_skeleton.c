@@ -75,33 +75,16 @@ int main(int argc, char ** argv) {
 
     //----Allocate local 2D-subdomains u_current, u_previous----//
     //----Add a row/column on each size for ghost cells----//
-    double **u;
-    u=allocate2d(local[0],local[1]+2);
     u_previous=allocate2d(local[0]+2,local[1]+2);
     u_current=allocate2d(local[0]+2,local[1]+2);   
-    for(i=0;i<local[0]+2;i++)
-	for(j=0;j<local[1]+2;j++){
-		u_previous[i][j]=u_current[i][j]=5;
-	} 
+
  	if(rank==0){
-		printf("rank_grid=(%d,%d)\n",rank_grid[0],rank_grid[1]);
+		printf("rank=%d | rank_grid=(%d,%d)\n",rank,rank_grid[0],rank_grid[1]);
 		printf("\n");
 		printf("U\n");
 		for(i=0; i<global[0]; i++){
 			for(j=0; j<global[0]; j++)
 				printf("%lf ", U[i][j]); 
-			printf("\n");
-		}
-		printf("\nu_current\n");
-		for(i=0; i<local[0]+2; i++){
-			for(j=0; j<local[1]+2; j++)
-				printf("%lf ", u_current[i][j]); 
-			printf("\n");
-		}
-		printf("\nu\n");
-		for(i=0; i<local[0]; i++){
-			for(j=0; j<local[1]+2; j++)
-				printf("%lf ", u[i][j]); 
 			printf("\n");
 		}
 	}
@@ -145,14 +128,6 @@ int main(int argc, char ** argv) {
 
 	//*************TODO*******************//
    int ret; 
-   if(rank==0)
-        printf("local[0]=%d, local[1]=%d\n",local[0], local[1]);
-   //ret = MPI_Scatterv(U[0], scattercounts, scatteroffset, global_block, u, local[0]*local[1], MPI_DOUBLE, 0, MPI_COMM_WORLD);
-   //MPI_Scatterv(U, scattercounts, scatteroffset, global_block, u_current, 1, global_block, 0, MPI_COMM_WORLD);
-   //MPI_Scatterv(U, scattercounts, scatteroffset, global_block, u_current+local[1]+1, local[0]*local[1], MPI_DOUBLE, 0, MPI_COMM_WORLD);
-   //MPI_Scatterv(U, scattercounts, scatteroffset, global_block, u_current+local[1]+2+1, 1, local_block, 0, MPI_COMM_WORLD);
-   //MPI_Scatterv(U, scattercounts, scatteroffset, global_block, &u_current[1][1], 1, local_block, 0, MPI_COMM_WORLD);
-   //*******best************ret = MPI_Scatterv(&U[0][0], scattercounts, scatteroffset, global_block, &u[0][0], 1, local_block, 0, MPI_COMM_WORLD);
    ret = MPI_Scatterv(&U[0][0], scattercounts, scatteroffset, global_block, &u_current[1][1], 1, local_block, 0, MPI_COMM_WORLD);
 
    if(ret != MPI_SUCCESS){
@@ -166,42 +141,22 @@ int main(int argc, char ** argv) {
 
 	/*Make sure u_current and u_previous are
 		both initialized*/
-/*
+
     for(i=0; i<local[0]; i++)
         for(j=0; j<local[1]; j++)
             u_previous[i][j] = u_current[i][j];
-*/
+
 
 
 
 
      //************************************//
 
-/*
+
     if (rank==0)
         free2d(U);
-*/
-int k;
-for(k=0; k<size; k++){
-	MPI_Barrier(MPI_COMM_WORLD);
-	if(k==rank){
-//	if(rank==0){
-		printf("rank_grid=(%d,%d)\n",rank_grid[0],rank_grid[1]);
-		printf("\n");
-		for(i=0; i<local[0]+2; i++){
-			for(j=0; j<local[1]+2; j++)
-				printf("%lf ", u_current[i][j]); 
-			printf("\n");
-		}
-//	}else{
-//		printf("rank_grid=(%d,%d)\n",rank_grid[0],rank_grid[1]);
-//	}
-	}
-}
-//MPI_BARRIER(MPI_COMM_WORLD);
-MPI_Finalize();
-return 0;
-     
+
+
 	//----Define datatypes or allocate buffers for message passing----//
 
 	//*************TODO*******************//
@@ -209,18 +164,18 @@ return 0;
 
 
 	/*Fill your code here*/
-/*
+
     double *north_vector, *south_vector;
     
-    north_vector = allocate2d(1,local[1]);
-    south_vector = allocate2d(1,local[1]);
+    north_vector = (double *)malloc(local[1]*sizeof(double));
+    south_vector = (double *)malloc(local[1]*sizeof(double));
 
     MPI_Datatype local_column;
     MPI_Type_vector(local[0],1,local[1]+2,MPI_DOUBLE,&dummy);
     MPI_Type_create_resized(dummy,0,sizeof(double),&local_column);
     MPI_Type_commit(&local_column);
 
-*/
+
 
 
 	//************************************//
@@ -229,19 +184,21 @@ return 0;
     //----Find the 4 neighbors with which a process exchanges messages----//
 
 	//*************TODO*******************//
-/*    int north, south, east, west;
-
-    int rank_dest[2];
-    MPI_Cart_shift(CART_COMM, 0, 1, rank_grid, rank_dest);
-    north = rank_dest[0];
-    MPI_Cart_shift(CART_COMM, 0, -1, rank_grid, rank_dest);
-    south = rank_dest[0];
-    MPI_Cart_shift(CART_COMM, 1, 1, rank_grid, rank_dest);
-    east = rank_dest[1];
-    MPI_Cart_shift(CART_COMM, 1, -1, rank_grid, rank_dest);
-    west = rank_dest[1];
-*/
-
+    int north, south, east, west; //the ranks of precesses in MPI_COMM_WORLD communicator
+    int rank_src, rank_dest;
+//    if(rank==0)
+//        printf("1)rank=%d | rank_src=%d rank_grid=(%d,%d) rank_dest=%d\n",rank,rank_src,rank_grid[0],rank_grid[1],rank_dest);
+    MPI_Cart_shift(CART_COMM, 0, 1, &rank_src, &rank_dest);
+    north = rank_src;
+    south = rank_dest;
+//    if(rank==0)
+//        printf("1)rank=%d | rank_src=%d rank_grid=(%d,%d) rank_dest=%d\n",rank,rank_src,rank_grid[0],rank_grid[1],rank_dest);
+    MPI_Cart_shift(CART_COMM, 1, 1, &rank_src, &rank_dest);
+    east = rank_dest;
+    west = rank_src;
+//    if(rank==0)
+//        printf("1)rank=%d | rank_src=%d rank_grid=(%d,%d) rank_dest=%d\n",rank,rank_src,rank_grid[0],rank_grid[1],rank_dest);
+    
 	/*Fill your code here*/
 
 
@@ -253,22 +210,22 @@ return 0;
 
 
 	//************************************//
-/*
+
     if(north == MPI_PROC_NULL)
-        north = global[0]-1;
+        north = -1;
     if(south == MPI_PROC_NULL)
-        south = 0;
+        south = -1;
     if(east == MPI_PROC_NULL)
-        east = 0;
+        east = -1;
     if(west == MPI_PROC_NULL)
-        west = global[1]-1;  
-*/
+        west = -1;  
+
 
     //---Define the iteration ranges per process-----//
 	//*************TODO*******************//
-/*
+
     int i_min,i_max,j_min,j_max;
-*/
+
 
 
 	/*Fill your code here*/
@@ -289,29 +246,67 @@ return 0;
 
 	//************************************//
 
-    // internal processes
-/*    if(rank_grid[0]>0 && rank_grid[0]<grid[0]-1 && 
+
+    if(rank_grid[0]>0 && rank_grid[0]<grid[0]-1 && 
        rank_grid[1]>0 && rank_grid[1]<grid[1]-1)
     {   
+        //internal process
         i_min = 1;
-        i_max = local[0]-2;
+        i_max = local[0];
         j_min = 1;
-        j_max = local[1]-2;
-    }else //boundary processes
-    {
-        if(rank_grid[1]==grid[1]-1){ //boundary processes and padded global array
-            i_min = 1;
-            i_max = local[0] - global[0] % local[0] - 2 ;
-            j_min = 1;
-            j_max = local[1]-2;
-        }else{
-            i_min = 1;
-            i_max = local[0]-2;
-            j_min = 1;
-            j_max = local[1]-2;
-        }
+        j_max = local[1];
+    }else if(rank_grid[1]==0 && rank_grid[0]>0 && rank_grid[0]<grid[0]-1){
+        //left-side non-corner boundary process
+        i_min = 1;
+        i_max = local[0];
+        j_min = 2;
+        j_max = local[1];
+    }else if(rank_grid[0]==0 && rank_grid[1]>0 && rank_grid[1]<grid[1]-1){
+        //north-side non-corner boundary process
+        i_min = 2;
+        i_max = local[0];
+        j_min = 1;
+        j_max = local[1];
+    }else if(rank_grid[1]==grid[1]-1 && rank_grid[0]>0 && rank_grid[0]<grid[0]-1){
+        //right-side non-corner boundary process (padding values)
+        i_min = 1;
+        i_max = local[0];
+        j_min = 1;
+        j_max = local[1]-global[1]%grid[1];
+    }else if(rank_grid[0]==grid[0]-1 && rank_grid[1]>0 && rank_grid[1]<grid[1]-1){
+        //south-side non-corner boundary process (padding values)
+        i_min = 1;
+        i_max = local[0]-global[0]%grid[0];
+        j_min = 1;
+        j_max = local[1];
+    }else if(rank_grid[0]==rank_grid[1]==0){
+        //upper left-side corner
+        i_min = 2;
+        i_max = local[0];
+        j_min = 2;
+        j_max = local[1];
+    }else if(rank_grid[0]==grid[0]-1 && rank_grid[1]==0){
+        //lower left-side corner
+        i_min = 1;
+        i_max = local[0]-global[0]%grid[0];
+        j_min = 2;
+        j_max = local[1];
+    }else if(rank_grid[0]==0 && rank_grid[1]==grid[1]-1){
+        //upper right side corner (padding values)
+        i_min = 2;
+        i_max = local[0];
+        j_min = 1;
+        j_max = local[1]-global[1]%grid[1];
+    }else{
+        //lower right side corner (padding values)
+        i_min = 1;
+        i_max = local[0]-global[0]%grid[0];
+        j_min = 1;
+        j_max = local[1]-global[1]%grid[1];
     }
-*/
+
+    
+
  	//----Computational core----//   
 /*	gettimeofday(&tts, NULL);
     #ifdef TEST_CONV
@@ -327,13 +322,22 @@ return 0;
 	 	//*************TODO*******************//
      
  
+if(rank==0){
+    printf("MPI_PROC_NULL=%d\n",MPI_PROC_NULL);
+    printf("rank=%d | rank_grid=(%d,%d)\n",rank,rank_grid[0],rank_grid[1]);
+    printf("(north,south,east,west)=(%d,%d,%d,%d)\n",north,south,east,west);
+    printf("(i_min,i_max,j_min,j_max)=(%d,%d,%d,%d)\n",i_min,i_max,j_min,j_max);
+}
 
+return 0;
 
 
 
 		/*Fill your code here*/
 
 		/*Compute and Communicate*/
+
+
 
 		/*Add appropriate timers for computation*/
 /*
